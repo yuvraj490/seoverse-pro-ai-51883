@@ -12,6 +12,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,20 +35,35 @@ const Auth = () => {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("Email not confirmed")) {
+            toast.error("Please confirm your email first. Check your inbox!");
+          } else {
+            throw error;
+          }
+          return;
+        }
         toast.success("Welcome back!");
         navigate("/generate");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}/generate`,
           },
         });
+        
         if (error) throw error;
-        toast.success("Account created! You can now log in.");
-        setIsLogin(true);
+        
+        // Check if email confirmation is required
+        if (data?.user && !data.session) {
+          setShowConfirmation(true);
+          toast.success("Check your email to confirm your account!");
+        } else {
+          toast.success("Account created! You can now log in.");
+          setIsLogin(true);
+        }
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -55,6 +71,68 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <div className="w-full max-w-md relative z-10 animate-fade-in">
+          <div className="text-center mb-8 space-y-4">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="relative">
+                <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                <div className="absolute inset-0 blur-md bg-primary/30 animate-pulse" />
+              </div>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold gradient-text">
+              Check Your Email! 📧
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              We've sent a confirmation email to:
+            </p>
+            <p className="text-xl font-semibold text-primary">{email}</p>
+          </div>
+
+          <div className="glass-effect border border-primary/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] space-y-6">
+            <div className="space-y-4 text-center">
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                <p className="text-sm text-foreground">
+                  ✉️ Check your inbox (and spam folder)
+                </p>
+              </div>
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                <p className="text-sm text-foreground">
+                  🔗 Click the confirmation link in the email
+                </p>
+              </div>
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                <p className="text-sm text-foreground">
+                  🎉 Start using SEOverse Pro!
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => {
+                setShowConfirmation(false);
+                setIsLogin(true);
+                setEmail("");
+                setPassword("");
+              }}
+              className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
