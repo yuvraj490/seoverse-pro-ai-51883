@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 3%;
+    --foreground: 270 100% 98%;
+
+    --card: 270 20% 8%;
+    --card-foreground: 270 100% 98%;
+
+    --popover: 270 20% 8%;
+    --popover-foreground: 270 100% 98%;
+
+    --primary: 270 95% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 50% 18%;
+    --secondary-foreground: 270 100% 98%;
+
+    --muted: 270 20% 15%;
+    --muted-foreground: 270 20% 60%;
+
+    --accent: 280 95% 70%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 30% 18%;
+    --input: 270 30% 18%;
+    --ring: 270 95% 65%;
+
+    --radius: 1rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(270, 95%, 65%), hsl(300, 95%, 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(260, 95%, 60%), hsl(280, 95%, 70%));
+    --gradient-dark: linear-gradient(180deg, hsl(270, 20%, 3%), hsl(270, 30%, 8%));
+    --gradient-card: linear-gradient(135deg, hsla(270, 30%, 10%, 0.8), hsla(280, 30%, 12%, 0.8));
+    --glow-purple: 0 0 40px hsla(270, 95%, 65%, 0.4);
+    --glow-strong: 0 0 60px hsla(270, 95%, 75%, 0.6);
+    --glow-accent: 0 0 50px hsla(280, 95%, 70%, 0.5);
+    --shadow-elevated: 0 20px 50px -12px hsla(270, 95%, 65%, 0.25);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px hsla(270, 95%, 65%, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsla(270, 95%, 65%, 0.6);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+  
+  .animate-slide-in {
+    animation: slide-in-left 0.5s ease-out;
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  
+  .glass-effect {
+    backdrop-filter: blur(16px) saturate(180%);
+    background: hsla(270, 20%, 8%, 0.75);
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+}
