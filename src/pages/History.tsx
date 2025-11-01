@@ -65,18 +65,21 @@ const History = () => {
       </div>
 
       <div className="container mx-auto max-w-4xl py-8 relative z-10">
-        <div className="flex items-center gap-4 mb-8 animate-fade-in">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-            className="hover:bg-primary/10 hover:scale-110 transition-all"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl md:text-4xl font-bold gradient-text">
-            Generation History
-          </h1>
+        <div className="flex items-center justify-between mb-8 animate-fade-in">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/generate")}
+              className="hover:bg-primary/10 transition-all"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Generate
+            </Button>
+            <h1 className="text-3xl md:text-4xl font-bold gradient-text">
+              Generation History
+            </h1>
+          </div>
         </div>
 
         {loading ? (

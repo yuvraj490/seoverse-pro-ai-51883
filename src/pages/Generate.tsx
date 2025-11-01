@@ -134,68 +134,59 @@ const Generate = () => {
               SEOverse Pro
             </span>
           </div>
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => navigate("/")}
-              title="Home"
-              className="hover:bg-primary/10 transition-all hover:scale-110"
+              className="hover:bg-primary/10 transition-all hover:scale-105"
             >
-              <Home className="h-5 w-5" />
+              <Home className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Home</span>
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <div className="text-sm px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
-                <span className="text-muted-foreground hidden sm:inline">Credits:</span>
+                <span className="text-muted-foreground">Credits:</span>
                 <span className="ml-2 font-bold text-primary">{credits}</span>
               </div>
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => navigate("/pricing")}
-                title="Add Credits"
-                className="hover:bg-primary/10 transition-all hover:scale-110 h-8 w-8"
+                className="hover:bg-primary/10 transition-all hover:scale-105"
               >
-                <DollarSign className="h-4 w-4" />
+                <DollarSign className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Add Credits</span>
               </Button>
             </div>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => navigate("/history")}
-              title="History"
-              className="hover:bg-primary/10 transition-all hover:scale-110"
+              className="hover:bg-primary/10 transition-all hover:scale-105"
             >
-              <History className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/pricing")}
-              title="Pricing"
-              className="hover:bg-primary/10 transition-all hover:scale-110"
-            >
-              <DollarSign className="h-5 w-5" />
+              <History className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">History</span>
             </Button>
             {isAdmin && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => navigate("/admin")}
-                title="Admin Panel"
-                className="hover:bg-primary/10 transition-all hover:scale-110"
+                className="hover:bg-primary/10 transition-all hover:scale-105"
               >
-                <Shield className="h-5 w-5" />
+                <Shield className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Admin</span>
               </Button>
             )}
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={handleLogout}
-              title="Logout"
-              className="hover:bg-destructive/10 transition-all hover:scale-110"
+              className="hover:bg-destructive/10 transition-all hover:scale-105"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>

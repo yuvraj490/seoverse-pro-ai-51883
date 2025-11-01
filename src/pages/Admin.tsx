@@ -4,15 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Users, CreditCard, Activity, Check, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, CreditCard, Activity, Check, X, Trash2, RefreshCw, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 
 const Admin = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ users: 0, generations: 0, credits: 0, payments: 0, totalRevenue: 0 });
   const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
   const [generations, setGenerations] = useState<any[]>([]);
   const [showGenerations, setShowGenerations] = useState(false);
@@ -39,53 +42,77 @@ const Admin = () => {
   }, [navigate]);
 
   const checkAdmin = async (userId: string) => {
-    const { data } = await (supabase as any)
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
+    try {
+      const { data } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
 
-    if (data) {
-      setIsAdmin(true);
-      fetchData();
-    } else {
+      if (data) {
+        setIsAdmin(true);
+        await fetchData();
+      } else {
+        toast.error("Unauthorized access");
+        navigate("/");
+      }
+    } catch (error: any) {
+      console.error("Admin check error:", error);
+      toast.error("Failed to verify admin access");
       navigate("/");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchData = async () => {
-    const [usersRes, gensRes, paymentsRes, allPaymentsRes] = await Promise.all([
-      (supabase as any).from("profiles").select("*").order("created_at", { ascending: false }),
-      (supabase as any).from("generations").select("*, profiles(email)").order("created_at", { ascending: false }).limit(50),
-      (supabase as any).from("payment_requests").select("*, profiles(email)").eq("status", "pending"),
-      (supabase as any).from("payment_requests").select("amount, status").eq("status", "approved"),
-    ]);
+    try {
+      const [usersRes, gensRes, paymentsRes, allPaymentsRes] = await Promise.all([
+        (supabase as any).from("profiles").select("*").order("created_at", { ascending: false }),
+        (supabase as any).from("generations").select("*, profiles(email)").order("created_at", { ascending: false }).limit(50),
+        (supabase as any).from("payment_requests").select("*, profiles(email)").eq("status", "pending"),
+        (supabase as any).from("payment_requests").select("amount, status").eq("status", "approved"),
+      ]);
 
-    if (usersRes.data) {
-      setUsers(usersRes.data);
-      setStats((s) => ({
-        ...s,
-        users: usersRes.data.length,
-        credits: usersRes.data.reduce((sum, u) => sum + u.credits, 0),
-      }));
-    }
+      if (usersRes.error) throw usersRes.error;
+      if (gensRes.error) throw gensRes.error;
+      if (paymentsRes.error) throw paymentsRes.error;
+      if (allPaymentsRes.error) throw allPaymentsRes.error;
 
-    if (gensRes.data) {
-      setGenerations(gensRes.data);
-      setStats((s) => ({ ...s, generations: gensRes.data.length }));
-    }
+      if (usersRes.data) {
+        setUsers(usersRes.data);
+        setFilteredUsers(usersRes.data);
+        setStats((s) => ({
+          ...s,
+          users: usersRes.data.length,
+          credits: usersRes.data.reduce((sum, u) => sum + u.credits, 0),
+        }));
+      }
 
-    if (paymentsRes.data) {
-      setPaymentRequests(paymentsRes.data);
-      setStats((s) => ({ ...s, payments: paymentsRes.data.length }));
-    }
+      if (gensRes.data) {
+        setGenerations(gensRes.data);
+        setStats((s) => ({ ...s, generations: gensRes.data.length }));
+      }
 
-    if (allPaymentsRes.data) {
-      const totalRevenue = allPaymentsRes.data.reduce((sum, p) => sum + p.amount, 0);
-      setStats((s) => ({ ...s, totalRevenue }));
+      if (paymentsRes.data) {
+        setPaymentRequests(paymentsRes.data);
+        setStats((s) => ({ ...s, payments: paymentsRes.data.length }));
+      }
+
+      if (allPaymentsRes.data) {
+        const totalRevenue = allPaymentsRes.data.reduce((sum, p) => sum + p.amount, 0);
+        setStats((s) => ({ ...s, totalRevenue }));
+      }
+    } catch (error: any) {
+      console.error("Fetch data error:", error);
+      toast.error("Failed to load admin data");
     }
   };
+
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [users]);
 
   const handleApprovePayment = async (requestId: string, userId: string) => {
     const { error: updateError } = await (supabase as any)
@@ -143,8 +170,8 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`Are you sure you want to delete user: ${userEmail}?`)) return;
 
     try {
       const { data, error } = await supabase.functions.invoke("admin-actions", {
@@ -153,12 +180,66 @@ const Admin = () => {
 
       if (error) throw error;
 
-      toast.success("User deleted");
+      toast.success(`User ${userEmail} deleted successfully`);
       fetchData();
     } catch (error: any) {
+      console.error("Delete user error:", error);
       toast.error(error.message || "Failed to delete user");
     }
   };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+    
+    const lowercaseQuery = query.toLowerCase();
+    const filtered = users.filter(user => 
+      user.email.toLowerCase().includes(lowercaseQuery) ||
+      user.id.toLowerCase().includes(lowercaseQuery)
+    );
+    setFilteredUsers(filtered);
+  };
+
+  const handleExportUsers = () => {
+    const csvContent = [
+      ['Email', 'Credits', 'Joined Date', 'User ID'].join(','),
+      ...users.map(u => [
+        u.email,
+        u.credits,
+        new Date(u.created_at).toLocaleDateString(),
+        u.id
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('Users exported successfully!');
+  };
+
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
+    toast.success('Data refreshed!');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading admin panel...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!session || !isAdmin) {
     return null;
@@ -173,13 +254,25 @@ const Admin = () => {
       </div>
 
       <div className="container mx-auto max-w-6xl py-8 relative z-10">
-        <div className="flex items-center gap-4 mb-8 animate-fade-in">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-primary/10 hover:scale-110 transition-all">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl md:text-4xl font-bold gradient-text">
-            Admin Dashboard
-          </h1>
+        <div className="flex items-center justify-between mb-8 animate-fade-in">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hover:bg-primary/10 transition-all">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+            <h1 className="text-3xl md:text-4xl font-bold gradient-text">
+              Admin Dashboard
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleRefresh} className="hover:bg-primary/10 transition-all">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/generate")} className="hover:bg-primary/10 transition-all">
+              Go to Generate
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -288,9 +381,24 @@ const Admin = () => {
 
         {/* Users */}
         <div className="animate-fade-in">
-          <h2 className="text-2xl font-bold mb-4 gradient-text">All Users ({stats.users})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold gradient-text">All Users ({stats.users})</h2>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Search by email or ID..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-72 bg-background/50 border-primary/30"
+              />
+              <Button variant="ghost" size="sm" onClick={handleExportUsers} className="hover:bg-primary/10 transition-all">
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
           <div className="space-y-4">
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <Card key={user.id} className="glass-effect border-primary/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 space-y-1">
@@ -312,8 +420,9 @@ const Admin = () => {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleDeleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user.id, user.email)}
                       className="hover:scale-105 transition-all"
+                      title="Delete User"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
