@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Copy, Sparkles, LogOut, History, DollarSign, Shield, Home } from "lucide-react";
+import { Copy, Sparkles } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TemplateSelector } from "@/components/TemplateSelector";
@@ -14,6 +14,7 @@ import { IdeaGenerator } from "@/components/IdeaGenerator";
 import HashtagGenerator from "@/components/HashtagGenerator";
 import CaptionGenerator from "@/components/CaptionGenerator";
 import TrendAnalyzer from "@/components/TrendAnalyzer";
+import { Navigation } from "@/components/Navigation";
 
 const Generate = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -122,75 +123,7 @@ const Generate = () => {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
       
-      {/* Floating Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-primary/20 animate-slide-in">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Sparkles className="h-6 w-6 text-primary animate-pulse" />
-              <div className="absolute inset-0 blur-md bg-primary/30 animate-pulse" />
-            </div>
-            <span className="font-bold text-xl gradient-text">
-              SEOverse Pro
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="hover:bg-primary/10 transition-all hover:scale-105"
-            >
-              <Home className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Home</span>
-            </Button>
-            <div className="flex items-center gap-2">
-              <div className="text-sm px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
-                <span className="text-muted-foreground">Credits:</span>
-                <span className="ml-2 font-bold text-primary">{credits}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/pricing")}
-                className="hover:bg-primary/10 transition-all hover:scale-105"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Add Credits</span>
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/history")}
-              className="hover:bg-primary/10 transition-all hover:scale-105"
-            >
-              <History className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">History</span>
-            </Button>
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/admin")}
-                className="hover:bg-primary/10 transition-all hover:scale-105"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Admin</span>
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="hover:bg-destructive/10 transition-all hover:scale-105"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Navigation credits={credits} isAdmin={isAdmin} onLogout={handleLogout} />
 
       <div className="container mx-auto px-4 pt-24 pb-12 relative z-10">
         <div className="max-w-4xl mx-auto space-y-8">

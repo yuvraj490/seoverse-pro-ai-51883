@@ -12,13 +12,25 @@ const Admin = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ users: 0, generations: 0, credits: 0, payments: 0, totalRevenue: 0 });
+  const [stats, setStats] = useState({ 
+    users: 0, 
+    generations: 0, 
+    credits: 0, 
+    payments: 0, 
+    totalRevenue: 0,
+    approvedPayments: 0,
+    rejectedPayments: 0,
+    activeUsers: 0
+  });
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
   const [generations, setGenerations] = useState<any[]>([]);
   const [showGenerations, setShowGenerations] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [userActivity, setUserActivity] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,11 +80,14 @@ const Admin = () => {
 
   const fetchData = async () => {
     try {
-      const [usersRes, gensRes, paymentsRes, allPaymentsRes] = await Promise.all([
+      const [usersRes, gensRes, paymentsRes, allPaymentsRes, approvedPaymentsRes, rejectedPaymentsRes, userActivityRes] = await Promise.all([
         (supabase as any).from("profiles").select("*").order("created_at", { ascending: false }),
         (supabase as any).from("generations").select("*, profiles(email)").order("created_at", { ascending: false }).limit(50),
         (supabase as any).from("payment_requests").select("*, profiles(email)").eq("status", "pending"),
         (supabase as any).from("payment_requests").select("amount, status").eq("status", "approved"),
+        (supabase as any).from("payment_requests").select("*, profiles(email)").eq("status", "approved").order("created_at", { ascending: false }).limit(20),
+        (supabase as any).from("payment_requests").select("*, profiles(email)").eq("status", "rejected").order("created_at", { ascending: false }).limit(20),
+        (supabase as any).from("generations").select("user_id, profiles(email)"),
       ]);
 
       if (usersRes.error) throw usersRes.error;
@@ -83,10 +98,15 @@ const Admin = () => {
       if (usersRes.data) {
         setUsers(usersRes.data);
         setFilteredUsers(usersRes.data);
+        
+        // Calculate active users (users who have made at least one generation)
+        const activeUserIds = new Set(userActivityRes.data?.map((g: any) => g.user_id) || []);
+        
         setStats((s) => ({
           ...s,
           users: usersRes.data.length,
           credits: usersRes.data.reduce((sum, u) => sum + u.credits, 0),
+          activeUsers: activeUserIds.size,
         }));
       }
 
@@ -101,12 +121,45 @@ const Admin = () => {
       }
 
       if (allPaymentsRes.data) {
-        const totalRevenue = allPaymentsRes.data.reduce((sum, p) => sum + p.amount, 0);
-        setStats((s) => ({ ...s, totalRevenue }));
+        const revenue = allPaymentsRes.data.reduce((sum, p) => sum + (p.amount || 0), 0);
+        setStats((s) => ({ ...s, totalRevenue: revenue }));
+      }
+
+      if (approvedPaymentsRes.data) {
+        setStats((s) => ({ ...s, approvedPayments: approvedPaymentsRes.data.length }));
+      }
+
+      if (rejectedPaymentsRes.data) {
+        setStats((s) => ({ ...s, rejectedPayments: rejectedPaymentsRes.data.length }));
+      }
+
+      // Combine payment history
+      const history = [
+        ...(approvedPaymentsRes.data || []),
+        ...(rejectedPaymentsRes.data || [])
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setPaymentHistory(history);
+
+      // Calculate user activity
+      if (userActivityRes.data) {
+        const activityMap = new Map();
+        userActivityRes.data.forEach((gen: any) => {
+          const userId = gen.user_id;
+          const email = gen.profiles?.email || 'Unknown';
+          if (!activityMap.has(userId)) {
+            activityMap.set(userId, { email, count: 0 });
+          }
+          activityMap.get(userId).count++;
+        });
+        const activity = Array.from(activityMap.entries())
+          .map(([userId, data]: [string, any]) => ({ userId, ...data }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+        setUserActivity(activity);
       }
     } catch (error: any) {
-      console.error("Fetch data error:", error);
-      toast.error("Failed to load admin data");
+      console.error("Fetch error:", error);
+      toast.error("Failed to load data");
     }
   };
 
@@ -276,7 +329,7 @@ const Admin = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 animate-fade-in">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8 animate-fade-in">
           <Card className="glass-effect border-primary/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
             <Users className="h-8 w-8 text-primary mb-2" />
             <p className="text-3xl font-bold text-primary">{stats.users}</p>
@@ -284,25 +337,50 @@ const Admin = () => {
           </Card>
           <Card className="glass-effect border-accent/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
             <Activity className="h-8 w-8 text-accent mb-2" />
-            <p className="text-3xl font-bold text-accent">{stats.generations}</p>
-            <p className="text-sm text-muted-foreground">Generations</p>
+            <p className="text-3xl font-bold text-accent">{stats.activeUsers}</p>
+            <p className="text-sm text-muted-foreground">Active Users</p>
           </Card>
           <Card className="glass-effect border-primary/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
-            <CreditCard className="h-8 w-8 text-primary mb-2" />
-            <p className="text-3xl font-bold text-primary">{stats.credits}</p>
-            <p className="text-sm text-muted-foreground">Total Credits</p>
+            <Activity className="h-8 w-8 text-primary mb-2" />
+            <p className="text-3xl font-bold text-primary">{stats.generations}</p>
+            <p className="text-sm text-muted-foreground">Generations</p>
           </Card>
           <Card className="glass-effect border-accent/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
             <CreditCard className="h-8 w-8 text-accent mb-2" />
-            <p className="text-3xl font-bold text-accent">{stats.payments}</p>
-            <p className="text-sm text-muted-foreground">Pending Payments</p>
+            <p className="text-3xl font-bold text-accent">{stats.credits}</p>
+            <p className="text-sm text-muted-foreground">Total Credits</p>
           </Card>
           <Card className="glass-effect border-primary/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
             <CreditCard className="h-8 w-8 text-primary mb-2" />
-            <p className="text-3xl font-bold text-primary">₹{stats.totalRevenue}</p>
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-3xl font-bold text-primary">{stats.payments}</p>
+            <p className="text-sm text-muted-foreground">Pending</p>
+          </Card>
+          <Card className="glass-effect border-accent/30 p-6 hover:shadow-[0_0_40px_rgba(168,85,247,0.2)] transition-all duration-300 hover:scale-105">
+            <CreditCard className="h-8 w-8 text-accent mb-2" />
+            <p className="text-3xl font-bold text-accent">₹{stats.totalRevenue}</p>
+            <p className="text-sm text-muted-foreground">Revenue</p>
           </Card>
         </div>
+
+        {/* Top Active Users */}
+        {userActivity.length > 0 && (
+          <div className="mb-8 animate-fade-in">
+            <h2 className="text-2xl font-bold mb-4 gradient-text">Top Active Users</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {userActivity.slice(0, 6).map((user) => (
+                <Card key={user.userId} className="glass-effect border-primary/30 p-4 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] transition-all">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm">{user.email}</p>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">{user.count}</p>
+                      <p className="text-xs text-muted-foreground">generations</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Payment Requests */}
         {paymentRequests.length > 0 && (
