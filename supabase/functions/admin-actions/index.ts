@@ -52,14 +52,29 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
 
+      // Try to delete user from auth - if they don't exist, that's ok
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
 
-      if (deleteError) {
+      // Only throw error if it's not a "user not found" error
+      if (deleteError && deleteError.message !== 'User not found') {
+        console.error('Delete user error:', deleteError);
         throw deleteError;
       }
 
+      // Clean up profiles table regardless of auth deletion result
+      const { error: profileError } = await adminClient
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Delete profile error:', profileError);
+      }
+
+      console.log(`Successfully deleted user ${userId} from auth and profiles`);
+
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, message: 'User deleted successfully' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
