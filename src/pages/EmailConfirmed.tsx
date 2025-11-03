@@ -65,7 +65,7 @@ const EmailConfirmed = () => {
                 You can now go back to the website and start using all features.
               </p>
               <Button
-                onClick={() => navigate("/generate")}
+                onClick={() => window.location.href = "https://seoverse.netlify.app/generate"}
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_50px_rgba(168,85,247,0.5)] h-11 text-base font-semibold"
               >
                 Go to Website
