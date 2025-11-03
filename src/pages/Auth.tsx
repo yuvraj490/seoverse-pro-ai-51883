@@ -47,7 +47,7 @@ const Auth = () => {
             email,
             password,
             options: {
-              emailRedirectTo: `${window.location.origin}/generate`,
+              emailRedirectTo: `${window.location.origin}/email-confirmed`,
             },
           });
 
