@@ -11,6 +11,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,13 +46,15 @@ const Auth = () => {
           const { error: signUpError } = await supabase.auth.signUp({
             email,
             password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/generate`,
+            },
           });
 
           if (signUpError) {
             toast.error(signUpError.message);
           } else {
-            toast.success("Account created and logged in!");
-            navigate("/generate");
+            setShowConfirmation(true);
           }
         } else {
           toast.error(signInError.message);
@@ -66,6 +69,42 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <div className="w-full max-w-md relative z-10 animate-fade-in">
+          <div className="glass-effect border border-primary/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] text-center">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <Sparkles className="h-16 w-16 text-primary animate-pulse" />
+                <div className="absolute inset-0 blur-md bg-primary/30 animate-pulse" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold gradient-text mb-4">Check Your Email! 📧</h2>
+            <p className="text-muted-foreground mb-6">
+              We've sent a confirmation link to <span className="text-primary font-semibold">{email}</span>
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Click the link in the email to verify your account and get started.
+            </p>
+            <Button
+              onClick={() => setShowConfirmation(false)}
+              variant="outline"
+              className="border-primary/30 hover:bg-primary/10"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
