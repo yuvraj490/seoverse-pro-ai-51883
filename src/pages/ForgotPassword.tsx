@@ -1,67 +1,31 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
 
-const Auth = () => {
+const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const navigate = useNavigate();
+  const [emailSent, setEmailSent] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/generate");
-      }
-    });
-  }, [navigate]);
-
-
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    
     setLoading(true);
 
     try {
-      // Try to sign in first
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (signInError) {
-        // If user doesn't exist, create account automatically
-        if (signInError.message.includes("Invalid login credentials")) {
-          const { error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/email-confirmed`,
-            },
-          });
-
-          if (signUpError) {
-            toast.error(signUpError.message);
-          } else {
-            setShowConfirmation(true);
-          }
-        } else {
-          toast.error(signInError.message);
-        }
+      if (error) {
+        toast.error(error.message);
       } else {
-        toast.success("Welcome back!");
-        navigate("/generate");
+        setEmailSent(true);
+        toast.success("Password reset email sent!");
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred");
@@ -70,7 +34,7 @@ const Auth = () => {
     }
   };
 
-  if (showConfirmation) {
+  if (emailSent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
@@ -88,18 +52,20 @@ const Auth = () => {
             </div>
             <h2 className="text-2xl font-bold gradient-text mb-4">Check Your Email! 📧</h2>
             <p className="text-muted-foreground mb-6">
-              We've sent a confirmation link to <span className="text-primary font-semibold">{email}</span>
+              We've sent a password reset link to <span className="text-primary font-semibold">{email}</span>
             </p>
             <p className="text-sm text-muted-foreground mb-6">
-              Click the link in the email to verify your account and get started.
+              Click the link in the email to reset your password.
             </p>
-            <Button
-              onClick={() => setShowConfirmation(false)}
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10"
-            >
-              Back to Login
-            </Button>
+            <Link to="/auth">
+              <Button
+                variant="outline"
+                className="border-primary/30 hover:bg-primary/10"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Login
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -108,7 +74,6 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
@@ -126,12 +91,12 @@ const Auth = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground">
-            Welcome! Enter your credentials to continue 🚀
+            Reset Your Password 🔑
           </p>
         </div>
 
         <div className="glass-effect border border-primary/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] hover:shadow-[0_0_70px_rgba(168,85,247,0.3)] transition-all duration-300">
-          <form onSubmit={handleAuth} className="space-y-6">
+          <form onSubmit={handleResetPassword} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -145,24 +110,6 @@ const Auth = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-primary hover:text-primary/80 transition-colors">
-                  Forgot Password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-background/50 border-primary/30 focus:border-primary transition-all"
-              />
-            </div>
-
             <Button
               type="submit"
               disabled={loading}
@@ -171,27 +118,23 @@ const Auth = () => {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing...
+                  Sending...
                 </span>
               ) : (
-                "Continue"
+                "Send Reset Link"
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              We'll automatically log you in or create an account
-            </p>
+            <Link to="/auth" className="text-sm text-primary hover:text-primary/80 transition-colors">
+              Back to Login
+            </Link>
           </div>
         </div>
-        
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy
-        </p>
       </div>
     </div>
   );
 };
 
-export default Auth;
+export default ForgotPassword;
